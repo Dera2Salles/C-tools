@@ -1,14 +1,15 @@
-const plainText = Array.from("CRYPTOGRAPHIE");
+function caesarCipher(text: string, shift = 3) {
+  return Array.from(text)
+    .map((char) => {
+      const code = char.charCodeAt(0);
+      if (code < 65 || code > 90) return char;
 
-const dico = Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-const chiffredText = [];
-for (const letter of plainText) {
-  chiffredText.push(
-    dico[
-      dico.findIndex((item) => item == letter) + 3 >= dico.length
-        ? dico.findIndex((item) => item == letter) - dico.length
-        : dico.findIndex((item) => item == letter) + 3
-    ],
-  );
+      const shifted = ((code - 65 + shift) % 26) + 65;
+      return String.fromCharCode(shifted);
+    })
+    .join("");
 }
-console.log(chiffredText.join());
+
+console.log(caesarCipher("CRYPTOGRAPHIE"));
+
+console.log(77%26)
