@@ -11,5 +11,3 @@ function caesarCipher(text: string, shift = 3) {
 }
 
 console.log(caesarCipher("CRYPTOGRAPHIE"));
-
-console.log(77%26)
