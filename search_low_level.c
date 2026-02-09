@@ -20,12 +20,9 @@ int main(int argc, char *argv[]) {
   char search[] = "toto";
   int wpos = 0;
   ssize_t byte_read;
-  int stop = 0;
 
   while ((byte_read = read(fd, buffer, BUF_SIZE)) > 0) {
-    if (stop) {
-      break;
-    }
+
     for (int i = 0; i < byte_read; i++) {
       char caracter = buffer[i];
       if (caracter == ' ' || caracter == '\n' || caracter == '\t' ||
@@ -33,13 +30,9 @@ int main(int argc, char *argv[]) {
         if (wpos > 0) {
           word[wpos] = '\0';
           if (strcmp(search, word) == 0) {
-            printf("--%s--", buffer);
 
-            printf("index %d", i);
             lseek(fd, -(byte_read - i + wpos), SEEK_CUR);
             write(fd, "niova", strlen("niova"));
-            stop = 1;
-            break;
           }
           wpos = 0;
         }
