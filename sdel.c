@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
           word[wpos] = '\0';
 
           if (strcmp(word, argv[2]) == 0) {
-            write(tmp, " ", 1);
+            write(tmp, "", 0);
           } else {
             write(tmp, word, strlen(word));
           }
