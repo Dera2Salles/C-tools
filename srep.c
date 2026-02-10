@@ -38,9 +38,9 @@ int main(int argc, char *argv[]) {
 
   while ((byte_read = read(fd, buffer, BUF_SIZE)) > 0) {
     for (int i = 0; i < byte_read; i++) {
-      char c = buffer[i];
+      char caracter = buffer[i];
 
-      if (isSeparator(c)) {
+      if (isSeparator(caracter)) {
         if (wpos > 0) {
           word[wpos] = '\0';
           if (strcmp(word, search) == 0) {
@@ -50,13 +50,13 @@ int main(int argc, char *argv[]) {
           }
           wpos = 0;
         }
-        write(tmp, &c, 1);
+        write(tmp, &caracter, 1);
       } else {
         if (wpos + 1 >= word_size) {
           word_size *= 2;
           word = realloc(word, word_size);
         }
-        word[wpos++] = c;
+        word[wpos++] = caracter;
       }
     }
   }
