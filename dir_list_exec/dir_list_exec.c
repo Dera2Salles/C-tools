@@ -1,5 +1,6 @@
 #include <dirent.h>
 #include <stdio.h>
+#include <unistd.h>
 
 int main(int argc, char *argv[]) {
   char *dirname = ".";
@@ -37,6 +38,8 @@ int main(int argc, char *argv[]) {
     }
     printf("%s  [%s]\n", entry->d_name, type);
   }
+  execl("/bin/ls", "ls", "-l", NULL);
+  perror("execl");
 
   closedir(d);
   return 0;
