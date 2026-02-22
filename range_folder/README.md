@@ -38,7 +38,7 @@ gcc range.c -o range
 ## ️ Usage
 
 ```bash
-./range " [path] .c|.h" [path]/C_files ".js|.ts" JS_files ".mp4|.mkv|.avi" Videos ".mp3|.wav|.flac" Music
+./range " [path] c|h" [path]/C_files "js|ts" JS_files "mp4|mkv|avi" Videos "mp3|wav|flac" Music
 ```
 
 ---
@@ -76,7 +76,7 @@ doc.txt
 Example:
 
 ```
-".mp4|.mkv|.avi" → Videos
+"mp4|mkv|avi" → Videos
 ```
 
 ---

@@ -18,7 +18,7 @@ const char *get_extension(const char *filename) {
   const char *dot = strrchr(filename, '.');
   if (!dot || dot == filename)
     return NULL;
-  return dot;
+  return dot + 1;
 }
 
 int isSameCategory(const char *ext, const char *group) {
@@ -60,10 +60,10 @@ int main(int argc, char *argv[]) {
 
   if ((argc - arg_start) % 2 != 0 || argc - arg_start < 2) {
     printf("Usage:\n");
-    printf("  %s [path] \".c|.h\" C_files \".js|.ts\" JS_files\n", argv[0]);
+    printf("  %s [path] \"pdf|doc\" Docs \"js|ts\" JS_files\n", argv[0]);
     printf("Example:\n");
-    printf("  %s Document \".c\" kd \".js\" jsdir\n", argv[0]);
-    printf("  %s \".c\" kd \".js\" jsdir   (defaults to current directory)\n",
+    printf("  %s Document \"pdf|doc\" Docs \"mp4|mkv|avi\" Videos\n", argv[0]);
+    printf("  %s \"c|h\" C_files \"js|ts\" JS_files   (current dir)\n",
            argv[0]);
     return 1;
   }
