@@ -47,19 +47,30 @@ int move_file(const char *base_path, const char *src, const char *dst_dir) {
 
 int main(int argc, char *argv[]) {
 
-  if ((argc - 2) % 2 != 0 || argc < 4) {
+  const char *base_path;
+  int arg_start;
+
+  if (argc >= 3 && argv[1][0] != '.') {
+    base_path = argv[1];
+    arg_start = 2;
+  } else {
+    base_path = ".";
+    arg_start = 1;
+  }
+
+  if ((argc - arg_start) % 2 != 0 || argc - arg_start < 2) {
     printf("Usage:\n");
-    printf("  %s <path> \".c|.h\" C_files \".js|.ts\" JS_files\n", argv[0]);
+    printf("  %s [path] \".c|.h\" C_files \".js|.ts\" JS_files\n", argv[0]);
     printf("Example:\n");
     printf("  %s Document \".c\" kd \".js\" jsdir\n", argv[0]);
+    printf("  %s \".c\" kd \".js\" jsdir   (defaults to current directory)\n",
+           argv[0]);
     return 1;
   }
 
-  const char *base_path = argv[1];
-
-  for (int i = 2; i < argc; i += 2) {
+  for (int i = arg_start; i < argc; i += 2) {
     if (isDirectory(argv[i + 1]) < 0) {
-      printf("Erreur dossier: %s\n", argv[i + 1]);
+      printf("Error creating directory: %s\n", argv[i + 1]);
       return 1;
     }
   }
@@ -81,7 +92,7 @@ int main(int argc, char *argv[]) {
     if (!ext)
       continue;
 
-    for (int i = 2; i < argc; i += 2) {
+    for (int i = arg_start; i < argc; i += 2) {
       if (isSameCategory(ext, argv[i])) {
         move_file(base_path, entry->d_name, argv[i + 1]);
         break;
