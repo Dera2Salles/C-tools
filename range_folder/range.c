@@ -4,6 +4,13 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+int isExistingDir(const char *path) {
+  struct stat st;
+  if (stat(path, &st) == 0 && S_ISDIR(st.st_mode))
+    return 1;
+  return 0;
+}
+
 int isDirectory(const char *path) {
   struct stat st;
   if (stat(path, &st) == 0) {
@@ -46,11 +53,10 @@ int move_file(const char *base_path, const char *src, const char *dst_dir) {
 }
 
 int main(int argc, char *argv[]) {
-
   const char *base_path;
   int arg_start;
 
-  if (argc >= 3 && argv[1][0] != '.') {
+  if (argc >= 3 && isExistingDir(argv[1])) {
     base_path = argv[1];
     arg_start = 2;
   } else {
@@ -84,7 +90,6 @@ int main(int argc, char *argv[]) {
   struct dirent *entry;
 
   while ((entry = readdir(d)) != NULL) {
-
     if (entry->d_type != DT_REG)
       continue;
 
