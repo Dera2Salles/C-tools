@@ -53,7 +53,6 @@ static int process_file(const char *filepath, const char *word_to_remove) {
   }
 
   int wlen = strlen(word_to_remove);
-  char buffer[BUF_SIZE];
   int word_cap = wlen + 64;
   char *word = malloc(word_cap);
   if (!word) {
@@ -62,23 +61,38 @@ static int process_file(const char *filepath, const char *word_to_remove) {
     close(tmp);
     return -1;
   }
+
+  char buffer[BUF_SIZE];
   int wpos = 0;
   int count = 0;
+  char pending_sep = 0; 
   ssize_t bytes;
 
   while ((bytes = read(fd, buffer, BUF_SIZE)) > 0) {
     for (int i = 0; i < bytes; i++) {
       char c = buffer[i];
+
       if (isSeparator(c)) {
         if (wpos > 0) {
           word[wpos] = '\0';
-          if (strcmp(word, word_to_remove) != 0)
+          if (strcmp(word, word_to_remove) != 0) {
+            if (pending_sep)
+              write_all(tmp, &pending_sep, 1);
             write_all(tmp, word, wpos);
-          else
+            pending_sep = c;
+          } else {
+            if (!pending_sep)
+              pending_sep = c;
+            else if (c == '\n')
+              pending_sep = c; 
             count++;
+          }
           wpos = 0;
+        } else {
+          if (pending_sep)
+            write_all(tmp, &pending_sep, 1);
+          pending_sep = c;
         }
-        write_all(tmp, &c, 1);
       } else {
         if (wpos + 1 >= word_cap) {
           word_cap *= 2;
@@ -96,11 +110,19 @@ static int process_file(const char *filepath, const char *word_to_remove) {
 
   if (wpos > 0) {
     word[wpos] = '\0';
-    if (strcmp(word, word_to_remove) != 0)
+    if (strcmp(word, word_to_remove) != 0) {
+      if (pending_sep)
+        write_all(tmp, &pending_sep, 1);
       write_all(tmp, word, wpos);
-    else
+      pending_sep = 0;
+    } else {
       count++;
+      pending_sep = 0;
+    }
   }
+
+  if (pending_sep)
+    write_all(tmp, &pending_sep, 1);
 
   free(word);
   close(fd);
