@@ -4,17 +4,38 @@
 #include <string.h>
 #include <unistd.h>
 
-#define BUF_SIZE 32
+#define BUF_SIZE 4096
 
-int isSeparator(char c) {
-  return (c == ' ' || c == '\n' || c == '\t' || c == '.' || c == ',');
+static void write_all(int fd, const char *buf, size_t n) {
+  while (n > 0) {
+    ssize_t w = write(fd, buf, n);
+    if (w <= 0) {
+      perror("write");
+      exit(1);
+    }
+    n -= w;
+    buf += w;
+  }
+}
+
+static int *build_failure(const char *s, int len) {
+  int *fail = calloc(len, sizeof(int));
+  int k = 0;
+  for (int i = 1; i < len; i++) {
+    while (k > 0 && s[k] != s[i])
+      k = fail[k - 1];
+    if (s[k] == s[i])
+      k++;
+    fail[i] = k;
+  }
+  return fail;
 }
 
 int main(int argc, char *argv[]) {
   if (argc < 4) {
     fprintf(stderr,
             "Usage: %s <fichier> <mot_a_chercher> <mot_de_remplacement>\n"
-            "Example:\n  %s out/toto.txt toto niov\n",
+            "Example:\n  %s file.txt dera ZAZA\n",
             argv[0], argv[0]);
     return 1;
   }
@@ -22,75 +43,48 @@ int main(int argc, char *argv[]) {
   char *filename = argv[1];
   char *search = argv[2];
   char *replace = argv[3];
+  int slen = strlen(search);
+  int rlen = strlen(replace);
+  int *fail = build_failure(search, slen);
 
   int fd = open(filename, O_RDONLY);
   int tmp = open("temp.txt", O_WRONLY | O_CREAT | O_TRUNC, 0644);
   if (fd == -1 || tmp == -1) {
     perror("open");
+    free(fail);
     return 1;
   }
 
-  char buffer[BUF_SIZE];
-  char *word = malloc(1);
-  int wpos = 0;
-  int word_size = 1;
-  ssize_t byte_read;
   int mpos = 0;
-  int slen = strlen(search);
+  char buffer[BUF_SIZE];
+  ssize_t byte_read;
 
   while ((byte_read = read(fd, buffer, BUF_SIZE)) > 0) {
     for (int i = 0; i < byte_read; i++) {
-      char caracter = buffer[i];
+      char c = buffer[i];
 
-      if (isSeparator(caracter)) {
-        if (wpos > 0) {
-          word[wpos] = '\0';
-          if (strcmp(word, search) == 0) {
-            write(tmp, replace, strlen(replace));
-          } else {
-            write(tmp, word, strlen(word));
-          }
-          wpos = 0;
-        }
-        write(tmp, &caracter, 1);
-      } else {
-        if (caracter == search[mpos]) {
-          word[wpos++] = caracter;
-          mpos++;
+      while (mpos > 0 && c != search[mpos])
+        mpos = fail[mpos - 1];
 
-          if (mpos == slen) {
-            word[wpos - slen] = '\0';
-            write(tmp, word, strlen(word));
-            write(tmp, replace, strlen(replace));
+      if (c == search[mpos])
+        mpos++;
 
-            wpos = 0;
-            mpos = 0;
-          }
-        } else {
-          if (mpos > 0) {
-            for (int j = 0; j < mpos; j++) {
-              write(tmp, &search[j], 1);
-            }
-            mpos = 0;
-          }
-          write(tmp, &caracter, 1);
-        }
+      if (mpos == slen) {
+        write_all(tmp, replace, rlen);
+        mpos = fail[slen - 1];
+      } else if (mpos == 0) {
+        write_all(tmp, &c, 1);
       }
     }
   }
 
-  if (wpos > 0) {
-    word[wpos] = '\0';
-    if (strcmp(word, search) == 0)
-      write(tmp, replace, strlen(replace));
-    else
-      write(tmp, word, strlen(word));
-  }
+  // Flush les caractères en attente (match incomplet en fin de fichier)
+  if (mpos > 0)
+    write_all(tmp, search, mpos);
 
-  free(word);
+  free(fail);
   close(fd);
   close(tmp);
-
   unlink(filename);
   rename("temp.txt", filename);
   return 0;
