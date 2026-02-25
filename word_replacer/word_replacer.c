@@ -35,6 +35,8 @@ int main(int argc, char *argv[]) {
   int wpos = 0;
   int word_size = 1;
   ssize_t byte_read;
+  int mpos = 0;
+  int slen = strlen(search);
 
   while ((byte_read = read(fd, buffer, BUF_SIZE)) > 0) {
     for (int i = 0; i < byte_read; i++) {
@@ -52,11 +54,27 @@ int main(int argc, char *argv[]) {
         }
         write(tmp, &caracter, 1);
       } else {
-        if (wpos + 1 >= word_size) {
-          word_size *= 2;
-          word = realloc(word, word_size);
+        if (caracter == search[mpos]) {
+          word[wpos++] = caracter;
+          mpos++;
+
+          if (mpos == slen) {
+            word[wpos - slen] = '\0';
+            write(tmp, word, strlen(word));
+            write(tmp, replace, strlen(replace));
+
+            wpos = 0;
+            mpos = 0;
+          }
+        } else {
+          if (mpos > 0) {
+            for (int j = 0; j < mpos; j++) {
+              write(tmp, &search[j], 1);
+            }
+            mpos = 0;
+          }
+          write(tmp, &caracter, 1);
         }
-        word[wpos++] = caracter;
       }
     }
   }
