@@ -3,11 +3,61 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
 #define BUF_SIZE 20
 #define WORD_SIZE 64
 
 int isEndOfSentence(char c) {
   return (c == ' ' || c == '\n' || c == '\t' || c == '.' || c == ',');
+}
+
+int process_search_word(char *search, int *word_count, int fd, int fd_out) {
+
+  char buffer[BUF_SIZE];
+  char *word = malloc(1);
+  if (!word) {
+    perror("malloc");
+    return -1;
+  }
+
+  int word_cap = 4;
+  int wpos = 0;
+  ssize_t byte_read;
+
+  while ((byte_read = read(fd, buffer, BUF_SIZE)) > 0) {
+    for (int i = 0; i < byte_read; i++) {
+      char caracter = buffer[i];
+      if (isEndOfSentence(caracter)) {
+        if (wpos > 0) {
+          word[wpos] = '\0';
+          if (strcmp(word, search) == 0)
+            (*word_count)++;
+          wpos = 0;
+        }
+      } else {
+        if (wpos + 1 >= word_cap) {
+          word_cap *= 2;
+          char *tmp = realloc(word, word_cap);
+          if (!tmp) {
+            perror("realloc");
+            break;
+          }
+          word = tmp;
+        }
+        if (wpos < WORD_SIZE - 1)
+          word[wpos++] = caracter;
+      }
+    }
+  }
+
+  if (wpos > 0) {
+    word[wpos] = '\0';
+    if (strcmp(word, search) == 0)
+      (*word_count)++;
+  }
+  free(word);
+
+  return 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -52,78 +102,41 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  int fd = open(filename, O_RDONLY);
-  if (fd == -1) {
-    perror("open");
+  int fd_in = open(filename, O_RDONLY);
+  if (fd_in == -1) {
+    perror("open input");
     return 1;
   }
 
   int fd_out = -1;
+
   if (output_file != NULL) {
     fd_out = open(output_file, O_WRONLY | O_CREAT | O_APPEND, 0644);
     if (fd_out == -1) {
       perror("open output");
-      close(fd);
+      close(fd_in);
       return 1;
     }
   }
 
-  char buffer[BUF_SIZE];
-  char *word = malloc(1);
-  if (!word) {
-    perror("malloc");
-    close(fd);
-    if (fd_out != -1)
-      close(fd_out);
-    return -1;
-  }
-
-  int word_cap = 4;
-  int wpos = 0;
-  ssize_t byte_read;
   int word_count = 0;
 
-  while ((byte_read = read(fd, buffer, BUF_SIZE)) > 0) {
-    for (int i = 0; i < byte_read; i++) {
-      char caracter = buffer[i];
-      if (isEndOfSentence(caracter)) {
-        if (wpos > 0) {
-          word[wpos] = '\0';
-          if (strcmp(word, search) == 0)
-            word_count++;
-          wpos = 0;
-        }
-      } else {
-        if (wpos + 1 >= word_cap) {
-          word_cap *= 2;
-          char *tmp = realloc(word, word_cap);
-          if (!tmp) {
-            perror("realloc");
-            break;
-          }
-          word = tmp;
-        }
-        if (wpos < WORD_SIZE - 1)
-          word[wpos++] = caracter;
-      }
-    }
-  }
-
-  if (wpos > 0) {
-    word[wpos] = '\0';
-    if (strcmp(word, search) == 0)
-      word_count++;
+  if (process_search_word(search, &word_count, fd_in, fd_out) != 0) {
+    close(fd_in);
+    close(fd_out);
+    exit(1);
   }
 
   char line_buf[256];
-  snprintf(line_buf, sizeof(line_buf), "Mot : %s , occurence : %d\n", search,
+  snprintf(line_buf, sizeof(line_buf),
+           "Mot : %s ,fichier : %s, occurence : %d\n ", search, filename,
            word_count);
-  printf("%s", line_buf);
+
   if (fd_out != -1)
     write(fd_out, line_buf, strlen(line_buf));
 
-  free(word);
-  close(fd);
+  close(fd_in);
+
   if (fd_out != -1)
     close(fd_out);
   return 0;
