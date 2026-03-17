@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
 
   int word_count = 0;
 
-  if (process_search_word(search, &word_count, fd_in, fd_out) != 0) {
+  if (process_search_word(search, &word_count, fd_in) != 0) {
     close(fd_in);
     close(fd_out);
     exit(1);

@@ -1,110 +1,10 @@
-#include <ctype.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#include "search.h"
-
-#define BUF_SIZE 20
-#define WORD_SIZE 64
-#define INITIAL_TABLE_SIZE 100
-
-typedef struct {
-  char *word;
-  int occurence;
-} WordCount;
-
-void clean_word(char *word) {
-  int j = 0;
-  for (int i = 0; word[i]; i++) {
-    if (isalnum((unsigned char)word[i])) {
-      word[j++] = tolower((unsigned char)word[i]);
-    }
-  }
-  word[j] = '\0';
-}
-
-char *find_word(int fd, off_t *cursor) {
-  char *word = malloc(WORD_SIZE);
-  if (!word) {
-    perror("malloc");
-    exit(1);
-  }
-
-  int wpos = 0;
-  int capacity = WORD_SIZE;
-  char c;
-  ssize_t byte_read;
-
-  while ((byte_read = read(fd, &c, 1)) > 0) {
-    if (isEndOfSentence(c)) {
-      if (wpos > 0) {
-        word[wpos] = '\0';
-        clean_word(word);
-        if (strlen(word) == 0) {
-          wpos = 0;
-          continue;
-        }
-        if (cursor)
-          *cursor = lseek(fd, 0, SEEK_CUR);
-        return word;
-      }
-    } else {
-      if (wpos >= capacity - 1) {
-        capacity *= 2;
-        char *tmp = realloc(word, capacity);
-        if (!tmp) {
-          free(word);
-          perror("realloc");
-          exit(1);
-        }
-        word = tmp;
-      }
-      word[wpos++] = c;
-    }
-  }
-
-  if (wpos > 0) {
-    word[wpos] = '\0';
-    clean_word(word);
-    if (strlen(word) == 0) {
-      free(word);
-      return NULL;
-    }
-    if (cursor)
-      *cursor = lseek(fd, 0, SEEK_CUR);
-    return word;
-  }
-
-  free(word);
-  return NULL;
-}
-
-int find_or_add_word(WordCount **word_counts, int *size, int *capacity,
-                     char *word) {
-  for (int i = 0; i < *size; i++) {
-    if (strcmp((*word_counts)[i].word, word) == 0) {
-      return i; 
-    }
-  }
-
-  if (*size >= *capacity) {
-    *capacity *= 2;
-    *word_counts = realloc(*word_counts, (*capacity) * sizeof(WordCount));
-    if (!*word_counts) {
-      perror("realloc");
-      exit(1);
-    }
-  }
-
-  (*word_counts)[*size].word = strdup(word);
-  (*word_counts)[*size].occurence = 0;
-  (*size)++;
-
-  return *size - 1;
-}
+#include "word_utils.h"
 
 int main(int argc, char *argv[]) {
   if (argc < 2) {
@@ -152,7 +52,7 @@ int main(int argc, char *argv[]) {
 
   int table_capacity = INITIAL_TABLE_SIZE;
   int table_size = 0;
-  WordCount *word_counts = malloc(table_capacity * sizeof(WordCount));
+  WordStruc *word_counts = malloc(table_capacity * sizeof(WordStruc));
   if (!word_counts) {
     perror("malloc");
     close(fd_in);
@@ -177,9 +77,9 @@ int main(int argc, char *argv[]) {
   }
 
   int max_index = 0;
-  for (int i = 1; i < table_size; i++) {
-    if (word_counts[i].occurence > word_counts[max_index].occurence) {
-      max_index = i;
+  for (int j = 1; j < table_size; j++) {
+    if (word_counts[j].occurence > word_counts[max_index].occurence) {
+      max_index = j;
     }
   }
 
@@ -202,8 +102,8 @@ int main(int argc, char *argv[]) {
     printf("%s", result_buf);
   }
 
-  for (int i = 0; i < table_size; i++) {
-    free(word_counts[i].word);
+  for (int j = 0; j < table_size; j++) {
+    free(word_counts[j].word);
   }
   free(word_counts);
   close(fd_in);
